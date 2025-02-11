@@ -33,11 +33,6 @@ async def create_event(
 
 
 
-router = APIRouter()
-
-
-
-router = APIRouter()
 
 @router.get("/get_all/", 
             #response_model=List[dict], dependencies=[Depends(get_admin)]

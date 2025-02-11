@@ -4,6 +4,8 @@ from typing import Optional
 from datetime import datetime
 from core.database import get_db, Session
 from models.models import User
+import random
+from middleware.auth_middleware import AuthService
 # User Models
 class UserBase(BaseModel):
     username: str = Field(..., min_length=4, max_length=20)
@@ -47,23 +49,74 @@ class UserDB(UserUpdate):
     class Config:
         from_attributes = True
 
+class SignupUser(BaseModel):
+    username: str
+    name: str
+    lname: str
+    phone_number: str
+    id_number: str
+    avatar: Optional[str] = None  # You can use a URL for avatar or leave it as None
+
+    class Config:
+        orm_mode = True  # This will allow Pydantic to work with SQLAlchemy models
+
+
 # Auth Router
 router = APIRouter(
     prefix="/api/user"
 )
+from models.models import Role
 
-@router.post("/register", response_model=UserCreate)
-def register(user: UserBase, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.username == user.username).first():
-        raise HTTPException (status_code=409, detail="username already exists")
-    new_user = user.model_dump()
-    db_user = User(**new_user)
-    db_user.role_id = 1
-    db.add(db_user)
+class SignupModel(BaseModel):
+    name: str
+    lname: str
+    phone_number: str
+    id_number: str
+    avatar: str
+
+from datetime import timezone
+def generate_username(name: str, lname: str) -> str:
+    return f"{name.lower()}.{lname.lower()}.{random.randint(100, 999)}"
+
+
+@router.post("/register")
+async def user_register(user: SignupModel, db: Session = Depends(get_db)):
+    # Check if the ID number is already taken
+    if db.query(User).filter(User.id_number == user.id_number).first():
+        raise HTTPException(status_code=409, detail="Duplicated code melli")
+
+
+
+    # Generate a random email
+    email = f"{user.name.lower()}.{user.lname.lower()}@example.com"
+    
+    # Generate a username from the name and lname
+    username = generate_username(user.name, user.lname)
+
+    # Generate a password (this is a placeholder, you should hash it properly in a real implementation)
+
+
+    # Create the user object
+    new_user = User(
+        username=username,
+        password=AuthService.get_password_hash(f'{user.id_number}'),
+        name=user.name,
+        lname=user.lname,
+        fa_name=user.name,  # Assuming fa_name is the same as name, adjust as needed
+        id_number=user.id_number,
+        phone_number=user.phone_number,
+        sid = "11111111111",
+        role_id=1,
+        avatar=None,  # Avatar is added if provided
+        created_at=datetime.now(timezone.utc),
+    )
+
+    # Add user to the session and commit
+    db.add(new_user)
     db.commit()
+    db.refresh(new_user)
 
-    return db_user
-
+    return {"message": "User registered successfully", "user_id": new_user.id}
 
 @router.post("/login")
 def login(email: EmailStr, password: str):
