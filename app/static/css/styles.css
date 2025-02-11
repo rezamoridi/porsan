@@ -1,0 +1,15 @@
+/* Ensure the main content is centered and fixed-width */
+.main-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh; /* Full height */
+    background-color: #f3f4f6; /* Tailwind bg-gray-100 */
+}
+
+/* Ensure max-width and prevent horizontal scrolling */
+.container {
+    max-width: 60rem; /* Same as max-w-5xl */
+    width: 120%;
+    padding: 1.5rem;
+}

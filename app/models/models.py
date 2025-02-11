@@ -1,212 +1,109 @@
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, ForeignKey, DateTime, 
-    Index, CheckConstraint, UniqueConstraint, JSON, Table
+    Index, CheckConstraint, UniqueConstraint, JSON, Table,
 )
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.sql import func
 from sqlalchemy.ext.declarative import declarative_base
+from datetime import datetime, timezone
 
 Base = declarative_base()
 
-# Association Tables
-user_interests = Table(
-    'user_interests', Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
-    Column('interest_id', Integer, ForeignKey('interests.id', ondelete='CASCADE'), primary_key=True)
-)
 
-survey_tags = Table(
-    'survey_tags', Base.metadata,
-    Column('survey_id', Integer, ForeignKey('surveys.id', ondelete='CASCADE'), primary_key=True),
-    Column('tag_id', Integer, ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True)
-)
-
-class Role(Base):
-    __tablename__ = 'roles'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True, nullable=False)
-    description = Column(Text)
-    created_at = Column(DateTime, default=func.now())
 
 class User(Base):
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
-    username = Column(String(50), unique=True, nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    hashed_password = Column(String(255), nullable=False)
-    role_id = Column(Integer, ForeignKey('roles.id'), nullable=False, default=1)
-    token_version = Column(Integer, default=0)
-    last_login = Column(DateTime)
-    is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
-    role = relationship("Role", backref="users")
-    surveys = relationship("Survey", back_populates="user")
-    interests = relationship("Interest", secondary=user_interests)
-    notifications = relationship("Notification", back_populates="recipient")
-
-class UserToken(Base):
-    __tablename__ = 'user_tokens'
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    access_token = Column(String(512), nullable=False)
-    refresh_token = Column(String(512), unique=True, nullable=False)
-    device_info = Column(Text)
-    ip_address = Column(String(45))
-    access_token_expires = Column(DateTime, nullable=False)
-    refresh_token_expires = Column(DateTime, nullable=False)
-    revoked = Column(Boolean, default=False)
-    revoked_at = Column(DateTime)
-    created_at = Column(DateTime, default=func.now())
+    username = Column(String, unique=True, nullable=False)
+    password = Column(String, nullable=False)
+    name = Column(String(20), nullable=False)
+    lname = Column(String(20), nullable=False)
+    fa_name = Column(String(20), nullable=False)
+    id_number = Column(String(10), nullable=False)
+    sid = Column(String(11), nullable=False)
+    university_id = Column(Integer, ForeignKey('universities.id'))
+    department_id = Column(Integer, ForeignKey('departments.id'))
+    major = Column(String)
+    birth_date = Column(DateTime)
+    role_id = Column(Integer, ForeignKey('roles.id'))
+    access_token = Column(Text)
+    refresh_token = Column(Text)
+    last_login = Column(DateTime)
+    birth_city = Column(String)
+    degree = Column(String)
+    phone_number = Column(String(11), CheckConstraint("phone_number LIKE '0%'"), nullable=False)
+    address = Column(String(100))
+    created_at = Column(DateTime, default=datetime.now(timezone.utc), nullable=False)
+    status = Column(Boolean, default=True)
+    
+    university = relationship("University")
+    department = relationship("Department")
+    role = relationship("Role")
+    events = relationship("Event", secondary="user_events", back_populates="users", overlaps="users")
+    avatar = relationship("UserImage", uselist=False, back_populates="user")
 
-class Survey(Base):
-    __tablename__ = 'surveys'
+class Event(Base):
+    __tablename__ = 'events'
+    
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    title = Column(String(255), nullable=False)
+    subject = Column(Text)
     description = Column(Text)
+    text = Column(Text)
     start_date = Column(DateTime)
     end_date = Column(DateTime)
-    status = Column(String(20), 
-                   CheckConstraint("status IN ('draft', 'active', 'closed')"),
-                   default='draft')
-    is_featured = Column(Boolean, default=False)
-    is_verified = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    code = Column(String)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
     
-    user = relationship("User", back_populates="surveys")
-    questions = relationship("Question", back_populates="survey")
-    responses = relationship("SurveyResponse", back_populates="survey")
-    tags = relationship("Tag", secondary=survey_tags)
-    settings = relationship("SurveySetting", uselist=False, back_populates="survey")
+    images = relationship("EventImage", back_populates="event")
+    users = relationship("User", secondary="user_events", back_populates="events", overlaps="events")
 
-class Question(Base):
-    __tablename__ = 'questions'
+class University(Base):
+    __tablename__ = 'universities'
+    
     id = Column(Integer, primary_key=True)
-    survey_id = Column(Integer, ForeignKey('surveys.id', ondelete='CASCADE'))
-    question_text = Column(Text, nullable=False)
-    question_type = Column(String(50), 
-                          CheckConstraint("question_type IN ('multiple_choice', 'text', 'rating', 'dropdown')"),
-                          nullable=False)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
-    survey = relationship("Survey", back_populates="questions")
-    choices = relationship("Choice", back_populates="question")
-    responses = relationship("Response", back_populates="question")
+    name = Column(String, nullable=False)
 
-class Choice(Base):
-    __tablename__ = 'choices'
+class Department(Base):
+    __tablename__ = 'departments'
+    
     id = Column(Integer, primary_key=True)
-    question_id = Column(Integer, ForeignKey('questions.id', ondelete='CASCADE'))
-    choice_text = Column(Text, nullable=False)
-    order_index = Column(Integer, default=0)
-    created_at = Column(DateTime, default=func.now())
-    
-    question = relationship("Question", back_populates="choices")
+    name = Column(String, nullable=False)
 
-class SurveyResponse(Base):
-    __tablename__ = 'survey_responses'
+class Major(Base):
+    __tablename__ = 'majors'
+    
     id = Column(Integer, primary_key=True)
-    survey_id = Column(Integer, ForeignKey('surveys.id', ondelete='CASCADE'))
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'))
-    created_at = Column(DateTime, default=func.now())
-    
-    survey = relationship("Survey", back_populates="responses")
-    user = relationship("User")
-    responses = relationship("Response", back_populates="survey_response")
-    response_metadata = relationship("ResponseMetadata", uselist=False, back_populates="response_group")
+    name = Column(String, nullable=False)
 
-class Response(Base):
-    __tablename__ = 'responses'
+class Role(Base):
+    __tablename__ = 'roles'
+    
     id = Column(Integer, primary_key=True)
-    survey_response_id = Column(Integer, ForeignKey('survey_responses.id', ondelete='CASCADE'))
-    question_id = Column(Integer, ForeignKey('questions.id', ondelete='CASCADE'))
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'))
-    time_taken_seconds = Column(Integer)
-    created_at = Column(DateTime, default=func.now())
-    
-    survey_response = relationship("SurveyResponse", back_populates="responses")
-    question = relationship("Question", back_populates="responses")
-    user = relationship("User")
-    text_response = relationship("TextResponse", uselist=False, back_populates="response")
-    choice_responses = relationship("ChoiceResponse", back_populates="response")
+    name = Column(String, nullable=False)
+    desc = Column(Text)
 
-class TextResponse(Base):
-    __tablename__ = 'text_responses'
-    response_id = Column(Integer, ForeignKey('responses.id', ondelete='CASCADE'), primary_key=True)
-    text_response = Column(Text, nullable=False)
+class UserEvents(Base):
+    __tablename__ = 'user_events'
     
-    response = relationship("Response", back_populates="text_response")
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    event_id = Column(Integer, ForeignKey("events.id"), primary_key=True)
 
-class ChoiceResponse(Base):
-    __tablename__ = 'choice_responses'
-    response_id = Column(Integer, ForeignKey('responses.id', ondelete='CASCADE'), primary_key=True)
-    choice_id = Column(Integer, ForeignKey('choices.id', ondelete='CASCADE'), primary_key=True)
+class UserImage(Base):
+    __tablename__ = 'user_images'
     
-    response = relationship("Response", back_populates="choice_responses")
-    choice = relationship("Choice")
-
-class ResponseMetadata(Base):
-    __tablename__ = 'response_metadata'
-    survey_response_id = Column(Integer, ForeignKey('survey_responses.id'), primary_key=True)
-    ip_address = Column(String(45))
-    user_agent = Column(Text)
-    geo_location = Column(Text)
-    submitted_at = Column(DateTime, default=func.now())
+    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    avatar_url = Column(String, nullable=False)
     
-    response_group = relationship("SurveyResponse", back_populates="response_metadata")
+    user = relationship("User", back_populates="avatar")
 
-class Interest(Base):
-    __tablename__ = 'interests'
+class EventImage(Base):
+    __tablename__ = 'event_images'
+    
     id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True, nullable=False)
-
-class Tag(Base):
-    __tablename__ = 'tags'
-    id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True, nullable=False)
-
-class Notification(Base):
-    __tablename__ = 'notifications'
-    id = Column(Integer, primary_key=True)
-    recipient_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    message = Column(Text, nullable=False)
-    notification_type = Column(String(50))
-    related_survey_id = Column(Integer, ForeignKey('surveys.id', ondelete='SET NULL'))
-    is_read = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=func.now())
+    image_id = Column(String, nullable=False)
+    event_id = Column(Integer, ForeignKey('events.id'))
     
-    recipient = relationship("User", back_populates="notifications")
-    related_survey = relationship("Survey")
-
-class SurveySetting(Base):
-    __tablename__ = 'survey_settings'
-    id = Column(Integer, primary_key=True)
-    survey_id = Column(Integer, ForeignKey('surveys.id', ondelete='CASCADE'))
-    settings = Column(JSONB, default={
-        "allow_anonymous": True,
-        "response_limit": None,
-        "require_login": False
-    })
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
-    survey = relationship("Survey", back_populates="settings")
-
-class SurveyAnalytics(Base):
-    __tablename__ = 'survey_analytics'
-    __table_args__ = {'info': dict(is_materialized_view=True)}
-    
-    survey_id = Column(Integer, primary_key=True)
-    total_participants = Column(Integer)
-    total_answers = Column(Integer)
-    avg_response_time = Column(Integer)
-    
-    @classmethod
-    def refresh(cls, session):
-        session.execute('REFRESH MATERIALIZED VIEW survey_analytics')
+    event = relationship("Event", back_populates="images")
