@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom JavaScript -->
+    <script src="/static/js/base.js" defer></script>
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="min-h-screen flex flex-col">
+        <!-- Navbar -->
+        <nav class="bg-white shadow-md sticky top-0 z-10">
+            <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="text-xl font-bold text-gray-800">Admin Panel</div>
+                <!-- Hamburger Menu for Mobile -->
+                <button id="menu-toggle" class="md:hidden text-gray-800 focus:outline-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+                    </svg>
+                </button>
+                <div id="datetime" class="hidden md:block text-sm text-gray-600"></div>
+            </div>
+        </nav>
+
+        <!-- Sidebar and Content -->
+        <div class="flex flex-1">
+            <!-- Sidebar -->
+            <aside id="sidebar" class="bg-white w-64 shadow-md md:block hidden fixed md:relative z-20 h-full md:h-auto">
+                <div class="p-4">
+                    <ul class="space-y-4">
+                        <li>
+                            <a href="/dashboard" class="block text-gray-800 hover:text-blue-600 font-medium">Dashboard</a>
+                        </li>
+                        <li>
+                            <a href="/users" class="block text-gray-800 hover:text-blue-600 font-medium">Users</a>
+                        </li>
+                        <li>
+                            <a href="/events" class="block text-gray-800 hover:text-blue-600 font-medium">Events</a>
+                        </li>
+                        <li>
+                            <a href="/profile" class="block text-gray-800 hover:text-blue-600 font-medium">Admin Profile</a>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- Main Content -->
+            <main class="flex-1 p-6 ml-0 md:ml-64">
+                {% block content %}
+                <!-- Dynamic content will be inserted here -->
+                {% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- JavaScript for Sidebar Toggle and Date/Time -->
+    <script type="mudole" src="../static/js/base.js"></script>
+    {% block script %}
+    {% endblock %}
+</body>
+</html>
